@@ -1,0 +1,205 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+import accessoriesData from '@/api/accessories.json';
+
+import { BackButton } from '@/components/BackButton';
+import { Cart } from '@/components/Cart';
+import { CustomSelect } from '@/components/CustomSelect';
+import { CustomSelectPage } from '@/components/CustomSelectPage';
+import { Loader } from '@/components/Loader';
+import { NotFound } from '@/components/NotFound';
+
+import { useFooter } from '@/context/FooterContext';
+import { useLoader } from '@/context/LoaderContext';
+
+import { EmptyPage } from '@/pages/EmptyPage';
+import { PaginationPage } from '@/pages/PaginationPage';
+
+import type { Product, ProductDetailed } from '@/types';
+
+import './Accessories.scss';
+
+const transformData = (data: ProductDetailed[]): Product[] => {
+  return data.map(item => ({
+    ...item,
+    itemId: item.id,
+    fullPrice: item.priceRegular,
+    price: item.priceDiscount,
+    capacity: item.capacity,
+    color: item.color,
+  }));
+};
+
+const cleanId = (id: string) => {
+  return id.replace(/_/g, '');
+};
+
+const extractVersionNumber = (name: string): number => {
+  const match = name.match(/\d+/);
+
+  return match ? parseInt(match[0], 10) : 0;
+};
+
+export const AccessoriesPage: React.FC = () => {
+  const [accessories, setAccessories] = useState<Product[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'all'>('all');
+  const [sortType, setSortType] = useState<string>('newest');
+
+  const { isLoading, setIsLoading } = useLoader();
+  const { setIsShow } = useFooter();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const params = new URLSearchParams(location.search);
+  const initialSortType = params.get('sort') === 'latest' ? 'latest' : 'newest';
+  const perPageParam = params.get('perPage') || 'all';
+  const pageParam = params.get('page') || '1';
+
+  useEffect(() => {
+    setIsLoading(true);
+
+    const timeoutId = setTimeout(() => {
+      const data = transformData(accessoriesData);
+
+      setAccessories(data);
+      setIsLoading(false);
+    }, 1000);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [setIsLoading]);
+
+  useEffect(() => {
+    const newItemsPerPage =
+      perPageParam === 'all' ? accessories.length : parseInt(perPageParam, 10);
+
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(parseInt(cleanId(pageParam), 10));
+    setSortType(initialSortType);
+  }, [perPageParam, pageParam, initialSortType, accessories.length]);
+
+  useEffect(() => {
+    setIsShow(accessories.length > 0);
+  }, [accessories.length, setIsShow]);
+
+  const updateUrlParams = (newParams: URLSearchParams) => {
+    navigate(`?${newParams.toString()}`);
+  };
+
+  const handleSortChange = (selectedSortType: string) => {
+    const newParams = new URLSearchParams(location.search);
+
+    newParams.set('sort', selectedSortType);
+    updateUrlParams(newParams);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    const newItemsPerPage =
+      value === 'all' ? accessories.length : parseInt(value, 10);
+
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+
+    const newParams = new URLSearchParams(location.search);
+
+    newParams.set('perPage', value);
+    newParams.set('page', '1');
+
+    updateUrlParams(newParams);
+  };
+
+  const handlePageChange = (page: number) => {
+    const cleanedPage = cleanId(page.toString());
+
+    setCurrentPage(page);
+
+    const newParams = new URLSearchParams(location.search);
+
+    newParams.set('page', cleanedPage);
+    updateUrlParams(newParams);
+  };
+
+  const sortedAccessories = useMemo(() => {
+    const sorted = [...accessories];
+
+    sorted.sort((a, b) => {
+      const versionA = extractVersionNumber(a.name);
+      const versionB = extractVersionNumber(b.name);
+
+      return sortType === 'latest' ? versionA - versionB : versionB - versionA;
+    });
+
+    return sorted;
+  }, [accessories, sortType]);
+
+  const pageSize = itemsPerPage === 'all' ? accessories.length : itemsPerPage;
+
+  const indexOfLastAccessory = currentPage * pageSize;
+  const indexOfFirstAccessory = indexOfLastAccessory - pageSize;
+
+  const currentAccessories = sortedAccessories.slice(
+    indexOfFirstAccessory,
+    indexOfLastAccessory,
+  );
+
+  const totalPages =
+    pageSize > 0 ? Math.ceil(accessories.length / pageSize) : 0;
+
+  return (
+    <div className="accessories container">
+      <BackButton title="Accessories" />
+
+      <h2 className="accessories__title">Accessories</h2>
+
+      <p className="accessories__subtitle">
+        {accessories.length > 0
+          ? `${accessories.length} items`
+          : 'No accessories available'}
+      </p>
+
+      <div className="accessories__sort">
+        <CustomSelect onSortChange={handleSortChange} />
+
+        <CustomSelectPage
+          onItemsPerPageChange={handleItemsPerPageChange}
+          currentItemsPerPage={
+            itemsPerPage === accessories.length
+              ? 'all'
+              : itemsPerPage.toString()
+          }
+        />
+      </div>
+
+      {isLoading ? (
+        <Loader />
+      ) : (
+        <div className="accessories__wrapper">
+          {accessories.length === 0 ? (
+            <div className="accessories__no-items">
+              <p>There are no accessories</p>
+              <NotFound />
+            </div>
+          ) : currentAccessories.length > 0 ? (
+            currentAccessories.map(product => (
+              <Cart key={product.id} product={product} showDiscount={true} />
+            ))
+          ) : (
+            <EmptyPage />
+          )}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <PaginationPage
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      )}
+    </div>
+  );
+};

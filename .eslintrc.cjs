@@ -37,6 +37,16 @@ module.exports = {
     'prettier'
   ],
   rules: {
+    'import/extensions': [
+      'error',
+      'ignorePackages',
+      {
+        js: 'never',
+        jsx: 'never',
+        ts: 'never',
+        tsx: 'never',
+      },
+    ],
     // JS
     'semi': 'off',
     '@typescript-eslint/semi': ['error', 'always'],
@@ -103,6 +113,12 @@ module.exports = {
   settings: {
     react: {
       version: 'detect',
+    },
+    'import/resolver': {
+      typescript: {
+        project: './tsconfig.json',
+      },
+      node: true,
     },
   },
 };
