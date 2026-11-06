@@ -1,0 +1,125 @@
+@mixin on-tablet {
+  @media (min-width: 640px) {
+    @content;
+  }
+}
+
+@mixin on-desktop {
+  @media (min-width: 1200px) {
+    @content;
+  }
+}
+
+@mixin count {
+  &--icon {
+    position: relative;
+    display: inline-block;
+  }
+  &--count {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    background-color: #4219d0;
+    color: white;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+  }
+}
+
+@mixin top-pages-styles {
+  &__title {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 41px;
+    letter-spacing: -0.01em;
+    text-align: left;
+    margin-top: 24px;
+    color: var(--text-color);
+  }
+
+  &__wrapper {
+    margin-top: 50px;
+    display: flex;
+    justify-content: center;
+    flex-flow: row wrap;
+    gap: 37px;
+
+    @include on-tablet {
+      justify-content: space-around;
+    }
+
+    @include on-desktop {
+      gap: 20px;
+      justify-content: space-between;
+    }
+  }
+}
+
+@mixin drop-down-list {
+  display: flex;
+  gap: 4px;
+  flex-direction: column;
+
+  &__label {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 21px;
+    text-align: left;
+    color: #89939a;
+    margin-top: 10px;
+  }
+
+  &__dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  &__options {
+    width: 137px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid $basic-grey-color;
+    padding: 12px;
+    outline: none;
+    font-size: 13px;
+    cursor: pointer;
+    background-image: url('../../public/img/icons/arrowDown.svg');
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    color: var(--text-color);
+  }
+
+  &__dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: var(--dropdown-list);
+  }
+
+  &__option {
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 13px;
+    &:hover {
+      background-color: #f0f0f0;
+    }
+    &:not(:last-child) {
+      border-bottom: 1px solid #eee;
+    }
+  }
+}
