@@ -5,6 +5,7 @@ $borderMain: #b6afaf;
 $colorButton: #4219d0;
 $basicWhite: #fff;
 $colorMenu: #f7fbfd;
+$basicAccess: 25px;
 
 .default-theme {
   background-color: #e2e6e9;
@@ -12,7 +13,7 @@ $colorMenu: #f7fbfd;
   --text-color: #0f0f11;
   --text-size: #0f0f11;
   --border-header: #b6afaf;
-  --bgcolor-header: #fff;
+  --bg-color-header: #fff;
   --favorites-height: calc(92vh);
   --basket-height: calc(92vh);
   --pagination-page: #0f0f11;
@@ -23,7 +24,7 @@ $colorMenu: #f7fbfd;
   background-color: #0f0f11;
 
   --text-color: #fff;
-  --bgcolor-header: #363434;
+  --bg-color-header: #363434;
   --border-header: #fff;
   --text-size: #fff;
   --favorites-height: 92vh;

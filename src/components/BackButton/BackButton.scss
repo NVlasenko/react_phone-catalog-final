@@ -2,7 +2,7 @@
 @import '../../styles/mixins';
 
 .back {
-  margin-top: 25px;
+  margin-top: $basicAccess;
   display: flex;
   flex-direction: row;
   gap: 15px;

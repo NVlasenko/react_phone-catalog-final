@@ -43,7 +43,7 @@
     line-height: 30.8px;
     text-align: left;
     color: var(--text-color);
-    
+
     @include on-tablet {
       font-size: 32px;
     }
@@ -61,7 +61,6 @@
     background: none;
     box-shadow: none;
     cursor: pointer;
-
     transform: rotate(180deg);
 
     &:disabled {

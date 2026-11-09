@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import type { ReactNode } from 'react';
 
@@ -22,22 +22,36 @@ type Props = {
 const LOCAL_STORAGE_KEY = 'favorites';
 
 export const FavoritesProvider: React.FC<Props> = ({ children }) => {
-  const [favorites, setFavorites] = useState<Product[]>([]);
+  const [favorites, setFavorites] = useState<Product[]>(() => {
+    try {
+      const storedFavorites = localStorage.getItem(LOCAL_STORAGE_KEY);
 
-  useEffect(() => {
-    const storedFavorites = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (!storedFavorites) {
+        return [];
+      }
 
-    if (storedFavorites) {
-      setFavorites(JSON.parse(storedFavorites));
+      const parsed: unknown = JSON.parse(storedFavorites);
+
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
-  }, []);
+  });
 
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(favorites));
   }, [favorites]);
 
   const addToFavorites = (phone: Product) => {
-    setFavorites(prevFavorites => [...prevFavorites, phone]);
+    setFavorites(prevFavorites => {
+      const alreadyExists = prevFavorites.some(item => item.id === phone.id);
+
+      if (alreadyExists) {
+        return prevFavorites;
+      }
+
+      return [...prevFavorites, phone];
+    });
   };
 
   const removeFromFavorites = (id: string) => {
@@ -52,7 +66,12 @@ export const FavoritesProvider: React.FC<Props> = ({ children }) => {
 
   return (
     <FavoritesContext.Provider
-      value={{ favorites, addToFavorites, removeFromFavorites, isInFavorites }}
+      value={{
+        favorites,
+        addToFavorites,
+        removeFromFavorites,
+        isInFavorites,
+      }}
     >
       {children}
     </FavoritesContext.Provider>
@@ -60,7 +79,7 @@ export const FavoritesProvider: React.FC<Props> = ({ children }) => {
 };
 
 export const useFavorites = () => {
-  const context = React.useContext(FavoritesContext);
+  const context = useContext(FavoritesContext);
 
   if (context === undefined) {
     throw new Error('useFavorites must be used within a FavoritesProvider');

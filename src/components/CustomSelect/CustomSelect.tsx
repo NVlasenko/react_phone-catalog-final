@@ -1,42 +1,39 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
+import type { SortType } from '@/utils/sortProducts';
+
 import './CustomSelect.scss';
 
 type Props = {
+  sortType: SortType;
   onSortChange: (selectedSortType: string) => void;
 };
 
-export const CustomSelect: React.FC<Props> = ({ onSortChange }) => {
+export const CustomSelect: React.FC<Props> = ({ sortType, onSortChange }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedOption, setSelectedOption] = useState('Newest');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const selectedOption = sortType === 'latest' ? 'Latest' : 'Newest';
+
   const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+    setIsDropdownOpen(prev => !prev);
   };
 
-  const handleOptionClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    const value = target.getAttribute('data-value');
-    const optionText = target.textContent;
-
-    if (value) {
-      setSelectedOption(optionText || 'Newest');
-      setIsDropdownOpen(false);
-
-      onSortChange(value);
-    }
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsDropdownOpen(false);
-    }
+  const handleOptionClick = (value: SortType) => {
+    onSortChange(value);
+    setIsDropdownOpen(false);
   };
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
@@ -47,27 +44,30 @@ export const CustomSelect: React.FC<Props> = ({ onSortChange }) => {
   return (
     <div className="custom-select" ref={dropdownRef}>
       <p className="custom-select__label">Sort By</p>
+
       <div className="custom-select__dropdown-wrapper">
         <div
           className="custom-select__options"
-          aria-label="Sort phones by"
+          aria-label="Sort products by"
           onClick={toggleDropdown}
         >
           {selectedOption}
         </div>
+
         {isDropdownOpen && (
           <div className="custom-select__dropdown">
             <div
               className="custom-select__option"
               data-value="newest"
-              onClick={handleOptionClick}
+              onClick={() => handleOptionClick('newest')}
             >
               Newest
             </div>
+
             <div
               className="custom-select__option"
               data-value="latest"
-              onClick={handleOptionClick}
+              onClick={() => handleOptionClick('latest')}
             >
               Latest
             </div>

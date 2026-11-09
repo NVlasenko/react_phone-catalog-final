@@ -8,8 +8,6 @@ You can browse phones, tablets, and accessories, view product details, add produ
 
 [View the website](https://nvlasenko.github.io/react_phone-catalog-final/)
 
-*The demo link will work after the website is published on GitHub Pages.*
-
 ## Technologies Used
 
 - React

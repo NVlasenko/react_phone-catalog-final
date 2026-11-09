@@ -41,9 +41,9 @@ export const NewItems: React.FC<NewItemsProps> = ({
       const gapStyle = getComputedStyle(cardsRef.current).gap;
       const gap = parseInt(gapStyle, 10) || 0;
 
-      const imageElement = document.querySelector(
+      const imageElement = cardsRef.current.querySelector(
         '.cart__image',
-      ) as HTMLImageElement;
+      ) as HTMLImageElement | null;
       const cardElement = imageElement?.closest(
         '.cart__wrapper',
       ) as HTMLDivElement;
@@ -113,7 +113,7 @@ export const NewItems: React.FC<NewItemsProps> = ({
               onClick={prevPage}
             >
               <img
-                src="/img/icons/SliderButtonDefault(right).svg"
+                src={`${import.meta.env.BASE_URL}img/icons/SliderButtonDefault(right).svg`}
                 alt="arrowLeft"
               />
             </button>
@@ -123,7 +123,7 @@ export const NewItems: React.FC<NewItemsProps> = ({
               onClick={nextPage}
             >
               <img
-                src="/img/icons/SliderButtonDefault(right).svg"
+                src={`${import.meta.env.BASE_URL}img/icons/SliderButtonDefault(right).svg`}
                 alt="arrowRight"
               />
             </button>

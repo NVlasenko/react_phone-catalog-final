@@ -17,7 +17,7 @@ export const ShopPage: React.FC = () => {
             <div className="shop__img--wrapper">
               <img
                 className="shop__img"
-                src="/img/category/categories_phones.png"
+                src={`${import.meta.env.BASE_URL}img/category/categories_phones.png`}
                 alt="Mobile"
               />
             </div>
@@ -30,7 +30,7 @@ export const ShopPage: React.FC = () => {
             <div className="shop__img--wrapper">
               <img
                 className="shop__img"
-                src="/img/category/categories_tablets.png"
+                src={`${import.meta.env.BASE_URL}img/category/categories_tablets.png`}
                 alt="Tablets"
               />
             </div>
@@ -43,7 +43,7 @@ export const ShopPage: React.FC = () => {
             <div className="shop__img--wrapper">
               <img
                 className="shop__img"
-                src="/img/category/categories_accessories.png"
+                src={`${import.meta.env.BASE_URL}img/category/categories_accessories.png`}
                 alt="Accessories"
               />
             </div>

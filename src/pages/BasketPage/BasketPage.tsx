@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { BackButton } from '@/components/BackButton';
 import { Modal } from '@/components/Modal';
@@ -7,6 +8,8 @@ import { useCart } from '@/context/CartContext';
 import { useFooter } from '@/context/FooterContext';
 
 import { EmptyPage } from '@/pages/EmptyPage';
+
+import type { Product } from '@/types';
 
 import './BasketPage.scss';
 
@@ -18,13 +21,35 @@ export const BasketPage: React.FC = () => {
     removeItem,
     clearCart,
   } = useCart();
+
+  const navigate = useNavigate();
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { setIsShow } = useFooter();
+
+  const getItemPrice = (phone: Product) => {
+    return phone.priceDiscount ?? phone.priceRegular ?? phone.price ?? 0;
+  };
+
   const getTotalPrice = () => {
     return cartItems.reduce(
-      (total, item) => total + item.phone.priceRegular * item.quantity,
+      (total, item) => total + getItemPrice(item.phone) * item.quantity,
       0,
     );
+  };
+
+  const totalQuantity = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0,
+  );
+
+  const handleProductClick = (phone: Product) => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+
+    navigate(`/${phone.category}/${phone.id}`);
   };
 
   const handleCheckoutClick = () => {
@@ -47,8 +72,11 @@ export const BasketPage: React.FC = () => {
   return (
     <div className="basket container">
       <BackButton title="Basket" />
+
       <h2 className="basket__title">Basket</h2>
-      <p className="basket__length">{cartItems.length} items</p>
+
+      <p className="basket__length">{totalQuantity} items</p>
+
       <div className="basket__content">
         <div className="basket__wrapper">
           {cartItems.length === 0 ? (
@@ -58,21 +86,32 @@ export const BasketPage: React.FC = () => {
           ) : (
             <>
               {cartItems.map(item => (
-                <div key={item.phone.id} className="basket__itemGoods">
+                <div
+                  key={item.phone.id}
+                  className="basket__itemGoods"
+                  onClick={() => handleProductClick(item.phone)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="basket__remove">
                     <img
-                      src="./img/icons/closeMenu.svg"
+                      src={`${import.meta.env.BASE_URL}img/icons/closeMenu.svg`}
                       alt="remove"
                       className="basket__remove--icon"
-                      onClick={() => removeItem(item.phone.id)}
+                      onClick={event => {
+                        event.stopPropagation();
+                        removeItem(item.phone.id);
+                      }}
                     />
+
                     <img
                       className="basket__imgGoods"
-                      src={item.phone.images[0]}
+                      src={`${import.meta.env.BASE_URL}${item.phone.images?.[0]?.replace(/^\/+/, '') ?? ''}`}
                       alt={item.phone.name}
                     />
+
                     <p className="basket__nameGoods">{item.phone.name}</p>
                   </div>
+
                   <div className="basket__add">
                     <div className="basket__quantityGoods">
                       <p
@@ -81,22 +120,32 @@ export const BasketPage: React.FC = () => {
                             ? 'basket__quantityGoods--disabled'
                             : ''
                         }`}
-                        onClick={() =>
-                          item.quantity > 1 && decreaseQuantity(item.phone.id)
-                        }
+                        onClick={event => {
+                          event.stopPropagation();
+
+                          if (item.quantity > 1) {
+                            decreaseQuantity(item.phone.id);
+                          }
+                        }}
                       >
                         -
                       </p>
+
                       <p className="basket__countGoods">{item.quantity}</p>
+
                       <p
                         className="basket__quantityGoods--plus"
-                        onClick={() => increaseQuantity(item.phone.id)}
+                        onClick={event => {
+                          event.stopPropagation();
+                          increaseQuantity(item.phone.id);
+                        }}
                       >
                         +
                       </p>
                     </div>
+
                     <p className="basket__priceGoods">
-                      ${item.phone.priceRegular * item.quantity}
+                      ${getItemPrice(item.phone) * item.quantity}
                     </p>
                   </div>
                 </div>
@@ -104,19 +153,22 @@ export const BasketPage: React.FC = () => {
             </>
           )}
         </div>
+
         {cartItems.length > 0 && (
           <div className="total">
             <p className="total__ubtitle">${getTotalPrice()}</p>
-            <p className="total__subtitle">
-              Total for {cartItems.length} items
-            </p>
+
+            <p className="total__subtitle">Total for {totalQuantity} items</p>
+
             <hr className="total__hr" />
+
             <button className="total__button" onClick={handleCheckoutClick}>
               Checkout
             </button>
           </div>
         )}
       </div>
+
       <Modal
         isVisible={isModalVisible}
         onClose={handleClose}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import './BackButton.scss';
 
@@ -14,6 +14,22 @@ export const BackButton: React.FC<BackButtonProps> = ({
   isFullDetailsOfProduct,
   nameProduct,
 }) => {
+  const navigate = useNavigate();
+
+  const categoryPath =
+    title.toLowerCase() === 'tablets'
+      ? '/tablets'
+      : title.toLowerCase() === 'accessories'
+        ? '/accessories'
+        : '/phones';
+
+  const handleBack = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.history.state?.idx > 0) {
+      event.preventDefault();
+      navigate(-1);
+    }
+  };
+
   return (
     <>
       <div className="back">
@@ -24,14 +40,17 @@ export const BackButton: React.FC<BackButtonProps> = ({
             alt="back home"
           />
         </Link>
+
         <img
           className="back__arrow"
           src={`${import.meta.env.BASE_URL}img/icons/backHomeArrow.svg`}
           alt="arrow home"
         />
-        <Link to="/phones" className="back__title">
+
+        <Link to={categoryPath} className="back__title">
           {title}
         </Link>
+
         {isFullDetailsOfProduct && (
           <>
             <img
@@ -39,17 +58,20 @@ export const BackButton: React.FC<BackButtonProps> = ({
               src={`${import.meta.env.BASE_URL}img/icons/backHomeArrow.svg`}
               alt="arrow home"
             />
+
             <p className="back__title">{nameProduct}</p>
           </>
         )}
       </div>
+
       {isFullDetailsOfProduct && (
-        <Link to="/" className="back__add">
+        <Link to={categoryPath} onClick={handleBack} className="back__add">
           <img
             className="back__arrow back__arrow--left"
             src={`${import.meta.env.BASE_URL}img/icons/backHomeArrow.svg`}
             alt="arrow home"
           />
+
           <p className="back__title">Back</p>
         </Link>
       )}

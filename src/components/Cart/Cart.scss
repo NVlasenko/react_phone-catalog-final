@@ -14,7 +14,8 @@
     padding: 32px;
     border-radius: 8px;
     width: 272px;
-    height: 470px;
+    min-height: 470px;
+    height: auto;
     transition: all 0.3s ease-in-out;
     cursor: pointer;
 
@@ -23,14 +24,14 @@
     }
 
     @include on-desktop {
-      height: 537px;
+      min-height: 537px;
     }
   }
+
 
   &__image {
     display: block;
     margin-inline: auto;
-
     height: 130px;
     object-fit: contain;
     transition: all 0.5s ease-in-out;
