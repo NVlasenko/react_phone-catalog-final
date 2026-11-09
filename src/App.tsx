@@ -16,10 +16,12 @@ export const App: React.FC = () => {
   return (
     <div className="App">
       <Header />
-      <div className="content">
+
+      <main className="content">
         <Outlet />
-        {isLoading || (isShow && <Footer />)}
-      </div>
+      </main>
+
+      {(isLoading || isShow) && <Footer />}
     </div>
   );
 };

@@ -14,6 +14,8 @@ export const Header: React.FC = () => {
   const { cartItems } = useCart();
   const { favorites } = useFavorites();
 
+  const baseUrl = import.meta.env.BASE_URL;
+
   const toggleMenu = () => {
     setIsNavOpen(!isNavOpen);
   };
@@ -57,12 +59,14 @@ export const Header: React.FC = () => {
     <header className="header">
       <div className="header__wrapper">
         <Link to="/" className="header__nav--logo" onClick={handleLinkClick}>
-          <img src="/img/icons/logo2.svg" alt="Logo" />
+          <img src={`${baseUrl}img/icons/logo2.svg`} alt="Logo" />
         </Link>
+
         <nav className={classNames('header__nav', { 'nav-open': isNavOpen })}>
           <NavLink to="/" className={getLinkClass} onClick={handleLinkClick}>
             Home
           </NavLink>
+
           <NavLink
             to="/phones"
             className={getLinkClass}
@@ -70,6 +74,7 @@ export const Header: React.FC = () => {
           >
             Phones
           </NavLink>
+
           <NavLink
             to="/tablets"
             className={getLinkClass}
@@ -77,6 +82,7 @@ export const Header: React.FC = () => {
           >
             Tablets
           </NavLink>
+
           <NavLink
             to="/accessories"
             className={getLinkClass}
@@ -85,10 +91,14 @@ export const Header: React.FC = () => {
             Accessories
           </NavLink>
         </nav>
+
         <ThemeToggleButton />
+
         <div className="menu" onClick={toggleMenu}>
           <img
-            src={`/img/icons/${isNavOpen ? 'closeMenu.svg' : 'Menu.png'}`}
+            src={`${baseUrl}img/icons/${
+              isNavOpen ? 'closeMenu.svg' : 'Menu.png'
+            }`}
             alt="menu"
           />
         </div>
@@ -100,7 +110,8 @@ export const Header: React.FC = () => {
             onClick={handleLinkClick}
           >
             <div className="header__favorite--icon">
-              <img src="/img/icons/favorites.png" alt="Favorite" />
+              <img src={`${baseUrl}img/icons/favorites.png`} alt="Favorite" />
+
               {getTotalFavorites() > 0 && (
                 <span className="header__favorite--count">
                   {getTotalFavorites()}
@@ -108,13 +119,15 @@ export const Header: React.FC = () => {
               )}
             </div>
           </NavLink>
+
           <NavLink
             to="/basket"
             className={getAdditionalLinkClass}
             onClick={handleLinkClick}
           >
             <div className="header__basket--icon">
-              <img src="/img/icons/basket.png" alt="Basket" />
+              <img src={`${baseUrl}img/icons/basket.png`} alt="Basket" />
+
               {getTotalQuantity() > 0 && (
                 <span className="header__basket--count">
                   {getTotalQuantity()}

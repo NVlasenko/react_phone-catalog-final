@@ -4,8 +4,8 @@
 .header {
   border-bottom: 1px solid var(--border-header);
   height: 65px;
-  background-color:var(--bgcolor-header);
-  
+  background-color:var(--bg-color-header);
+
   @include on-tablet {
     border-bottom: 1px solid $border;
   }

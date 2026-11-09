@@ -68,7 +68,7 @@ export const MainSlider: React.FC = () => {
     <div className="mainSlider">
       <div className="mainSlider__wrapper">
         <img
-          src="./img/icons/SliderButtonLeft.png"
+          src={`${import.meta.env.BASE_URL}img/icons/SliderButtonLeft.png`}
           alt="sliderLeft"
           className="slider"
           onClick={handlePrevious}
@@ -79,7 +79,7 @@ export const MainSlider: React.FC = () => {
           className={`mainSlider__img ${isAnimating ? 'fade-out' : 'fade-in'}`}
         />
         <img
-          src="./img/icons/SliderButtonRight.png"
+          src={`${import.meta.env.BASE_URL}img/icons/SliderButtonRight.png`}
           alt="sliderRight"
           className="slider"
           onClick={handleNext}

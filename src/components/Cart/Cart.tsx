@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { CartControls } from '@/components/CartControls';
@@ -19,10 +19,13 @@ type Props = {
 
 export const Cart: React.FC<Props> = ({ product, showDiscount = true }) => {
   const { addToCart, removeItem, isInCart } = useCart();
+
   const { addToFavorites, removeFromFavorites, isInFavorites } = useFavorites();
-  const [isAdded, setIsAdded] = useState(isInCart(product.id));
-  const [isLiked, setIsLiked] = useState(isInFavorites(product.id));
+
   const navigate = useNavigate();
+
+  const isAdded = isInCart(product.id);
+  const isLiked = isInFavorites(product.id);
 
   const handleAddToCart = () => {
     if (isAdded) {
@@ -30,8 +33,6 @@ export const Cart: React.FC<Props> = ({ product, showDiscount = true }) => {
     } else {
       addToCart(product);
     }
-
-    setIsAdded(!isAdded);
   };
 
   const handleToggleFavorite = () => {
@@ -40,22 +41,22 @@ export const Cart: React.FC<Props> = ({ product, showDiscount = true }) => {
     } else {
       addToFavorites(product);
     }
-
-    setIsLiked(!isLiked);
   };
-
-  useEffect(() => {
-    setIsAdded(isInCart(product.id));
-  }, [isInCart, product.id]);
-
-  useEffect(() => {
-    setIsLiked(isInFavorites(product.id));
-  }, [isInFavorites, product.id]);
 
   const handleImageClick = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+
     navigate(`/${product.category}/${product.id}`);
   };
+
+  const imagePath = product.images?.[0];
+
+  const imageSrc = imagePath
+    ? `${import.meta.env.BASE_URL}${imagePath.replace(/^\/+/, '')}`
+    : '';
 
   return (
     <div className="cart">
@@ -63,24 +64,28 @@ export const Cart: React.FC<Props> = ({ product, showDiscount = true }) => {
         <div className="cart__wrapper">
           <img
             className="cart__image"
-            src={`/${product.images[0].replace(/^\/+/, '')}`}
+            src={imageSrc}
             alt={product.name}
             onClick={handleImageClick}
           />
 
           <p className="cart__name">{product.name}</p>
+
           <PriceDisplay
             priceRegular={product.priceRegular}
             priceDiscount={product.priceDiscount}
             showDiscount={showDiscount}
           />
+
           <hr />
+
           <PhoneSpecs
             screen={product.screen}
             capacity={product.capacity}
             ram={product.ram}
             color={product.color}
           />
+
           <CartControls
             isAdded={isAdded}
             isLiked={isLiked}

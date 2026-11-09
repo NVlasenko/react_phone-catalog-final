@@ -7,15 +7,9 @@
   font-weight: 900;
 }
 
-p,
-h1,
-h2 {
-  padding: 0;
-  margin: 0;
-}
-
-body, html {
-  height: 100vh;
+html,
+body {
+  min-height: 100%;
   margin: 0;
   font-family: Mont, sans-serif;
   scroll-behavior: smooth;
@@ -23,8 +17,25 @@ body, html {
   color: var(--text-color) !important;
 }
 
+[id='root'] {
+  min-height: 100vh;
+}
+
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .content {
-  flex-grow: 1;
+  flex: 1;
+}
+
+p,
+h1,
+h2 {
+  padding: 0;
+  margin: 0;
 }
 
 .white-text {

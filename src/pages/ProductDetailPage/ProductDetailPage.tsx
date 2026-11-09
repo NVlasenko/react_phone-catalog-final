@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -31,224 +31,195 @@ import './ProductDetailPage.scss';
 
 export const ProductDetailPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
+  const navigate = useNavigate();
+
   const { productType, setProductType } = useProductCategoryContext();
+
   const { addToCart, removeItem, isInCart } = useCart();
+
   const { addToFavorites, removeFromFavorites, isInFavorites } = useFavorites();
+
   const [product, setProduct] = useState<ProductWithSerialNumber | null>(null);
+
+  const [allProducts, setAllProducts] = useState<ProductWithSerialNumber[]>([]);
+
   const [activeImage, setActiveImage] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(
-    undefined,
-  );
-  const [selectedCapacity, setSelectedCapacity] = useState<string | undefined>(
-    undefined,
-  );
-  const [isAdded, setIsAdded] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+
   const [errors, setErrors] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const renderCount = useRef(0);
 
-  const allProducts = useRef<ProductWithSerialNumber[]>([]);
-  const serialNumberRef = useRef(1);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    let cancelled = false;
+    const requestId = ++requestIdRef.current;
+    const startedAt = Date.now();
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    renderCount.current += 1;
-  }, [productId, setProductType]);
-
-  useEffect(() => {
-    const updateCategory = async () => {
-      if (!productId) {
-        return;
-      }
+    const loadProduct = async () => {
+      setLoading(true);
+      setErrors(null);
+      setProduct(null);
+      setAllProducts([]);
+      setActiveImage(null);
 
       try {
+        if (!productId) {
+          throw new Error('Product ID is missing');
+        }
+
+        // Determine the category before requesting the product.
         const category = await determineCategoryByProductId(productId);
 
+        const apiMethod = getProductAPI(category);
+        const fetchedProduct: ProductDetailed | null =
+          await apiMethod(productId);
+
+        if (!fetchedProduct) {
+          if (!cancelled && requestId === requestIdRef.current) {
+            setProduct(null);
+          }
+
+          return;
+        }
+
+        const relatedProducts = await getProductsByName(
+          category,
+          fetchedProduct.namespaceId,
+        );
+
+        const products: ProductWithSerialNumber[] = relatedProducts.map(
+          (item, index) => ({
+            ...item,
+            serialNumber: index + 1,
+          }),
+        );
+
+        const currentProduct = products.find(
+          item => item.id === fetchedProduct.id,
+        ) ?? {
+          ...fetchedProduct,
+          serialNumber: products.length + 1,
+        };
+
+        if (cancelled || requestId !== requestIdRef.current) {
+          return;
+        }
+
         setProductType(category);
-      } catch (error) {
-        setErrors('Failed to determine product category.');
+        setAllProducts(products);
+        setProduct(currentProduct);
+        setActiveImage(currentProduct.images[0] ?? null);
+      } catch {
+        if (!cancelled && requestId === requestIdRef.current) {
+          setErrors('Error fetching product data.');
+          setProduct(null);
+        }
+      } finally {
+        // Preserve the one-second minimum loader duration.
+        const elapsed = Date.now() - startedAt;
+        const remaining = Math.max(0, 1000 - elapsed);
+
+        await new Promise<void>(resolve => {
+          setTimeout(resolve, remaining);
+        });
+
+        if (!cancelled && requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
-    updateCategory();
+    void loadProduct();
+
+    return () => {
+      cancelled = true;
+    };
   }, [productId, setProductType]);
 
-  const assignSerialNumbers = (
-    products: ProductDetailed[],
-  ): ProductWithSerialNumber[] => {
-    return products.map(item => ({
-      ...item,
-      serialNumber: serialNumberRef.current++,
-    }));
-  };
+  const isAdded = product ? isInCart(product.id) : false;
 
-  const loadProduct = useCallback(async () => {
-    if (!productId) {
+  const isLiked = product ? isInFavorites(product.id) : false;
+
+  const handleColorChange = (color: string) => {
+    if (!product || color === product.color) {
+      return;
+    }
+
+    const updatedProduct = allProducts.find(
+      item => item.color === color && item.capacity === product.capacity,
+    );
+
+    if (!updatedProduct) {
+      setErrors('Product with selected color and capacity not found.');
+
       return;
     }
 
     setErrors(null);
+    navigate(`/${productType}/${updatedProduct.id}`);
+  };
 
-    try {
-      const apiMethod = getProductAPI(productType);
-      const fetchedProduct: ProductDetailed | null = await apiMethod(productId);
-
-      if (!fetchedProduct) {
-        setProduct(null);
-
-        return;
-      }
-
-      if (fetchedProduct.category === 'tablets') {
-        setProductType('tablets');
-      } else if (fetchedProduct.category === 'accessories') {
-        setProductType('accessories');
-      }
-
-      const products = assignSerialNumbers(
-        await getProductsByName(productType, fetchedProduct.namespaceId),
-      );
-
-      allProducts.current = products;
-
-      const updatedProduct =
-        products.find(item => item.id === fetchedProduct.id) || null;
-
-      setProduct(updatedProduct);
-      setActiveImage(updatedProduct?.images[0] || null);
-      setSelectedColor(updatedProduct?.color);
-      setSelectedCapacity(updatedProduct?.capacity);
-
-      setIsAdded(isInCart(updatedProduct?.id || ''));
-      setIsLiked(isInFavorites(updatedProduct?.id || ''));
-    } catch (error) {
-      setErrors('Error fetching product data.');
-      setProduct(null);
+  const handleCapacityChange = (capacity: string) => {
+    if (!product || capacity === product.capacity) {
+      return;
     }
-  }, [productId, productType, isInCart, isInFavorites, setProductType]);
 
-  useEffect(() => {
-    loadProduct();
-  }, [loadProduct]);
+    const updatedProduct = allProducts.find(
+      item => item.color === product.color && item.capacity === capacity,
+    );
 
-  const handleColorChange = useCallback(
-    (color: string) => {
-      if (product) {
-        setSelectedColor(color);
-        const newProductId = product.id.replace(/-[^-]+$/, `-${color}`);
+    if (!updatedProduct) {
+      setErrors('Product with selected color and capacity not found.');
 
-        navigate(`/${productType}/${newProductId}`);
-      }
-    },
-    [product, navigate, productType],
-  );
+      return;
+    }
 
-  const handleCapacityChange = useCallback(
-    async (capacity: string) => {
-      if (product && capacity !== selectedCapacity) {
-        try {
-          const products = assignSerialNumbers(
-            await getProductsByName(productType, product.namespaceId),
-          );
-
-          const updatedProduct = products.find(
-            item => item.color === selectedColor && item.capacity === capacity,
-          );
-
-          if (updatedProduct) {
-            const newProductId = updatedProduct.id;
-
-            setProduct(updatedProduct);
-            setActiveImage(updatedProduct.images[0]);
-            setSelectedCapacity(capacity);
-            navigate(`/${productType}/${newProductId}`);
-          } else {
-            setErrors('Product with selected color and capacity not found.');
-          }
-        } catch (error) {
-          setErrors('Error fetching updated product data.');
-        }
-      }
-    },
-    [product, navigate, productType, selectedColor, selectedCapacity],
-  );
+    setErrors(null);
+    navigate(`/${productType}/${updatedProduct.id}`);
+  };
 
   const handleAddToCart = () => {
-    if (product) {
-      if (isAdded) {
-        removeItem(product.id);
-      } else {
-        addToCart(toProduct(product));
-      }
+    if (!product) {
+      return;
+    }
 
-      setIsAdded(!isAdded);
+    if (isAdded) {
+      removeItem(product.id);
+    } else {
+      addToCart(toProduct(product));
     }
   };
 
   const handleToggleFavorite = () => {
-    if (product) {
-      if (isLiked) {
-        removeFromFavorites(product.id);
-      } else {
-        addToFavorites(toProduct(product));
-      }
+    if (!product) {
+      return;
+    }
 
-      setIsLiked(!isLiked);
+    if (isLiked) {
+      removeFromFavorites(product.id);
+    } else {
+      addToFavorites(toProduct(product));
     }
   };
 
-  if (!product) {
-    return <EmptyPage />;
-  }
+  const recommendedProducts = useMemo(() => {
+    if (!product) {
+      return [];
+    }
 
-  if (errors) {
-    return <div>Error: {errors}</div>;
-  }
+    const extractModelName = (name: string) =>
+      name.split(' ').slice(0, -2).join(' ');
 
-  const getRecommendedProducts = (
-    products: ProductDetailed[],
-    name: string,
-    category: string,
-  ): ProductDetailed[] => {
-    const extractModelName = (
-      productName: string,
-      productCategory: string,
-    ): string => {
-      switch (productCategory) {
-        case 'phones':
-        case 'tablets':
-        case 'accessories':
-          return productName.split(' ').slice(0, -2).join(' ');
-        default:
-          return productName;
-      }
-    };
+    const modelName = extractModelName(product.name);
 
-    const modelName = extractModelName(name, category);
-
-    return products
-      .filter(item => {
-        const itemModelName = extractModelName(item.name, category);
-
-        return itemModelName === modelName;
-      })
-      .slice(0, 10);
-  };
-
-  const recommendedProducts = getRecommendedProducts(
-    allProducts.current,
-    product.name,
-    productType,
-  );
+    return allProducts
+      .filter(
+        item =>
+          item.id !== product.id && extractModelName(item.name) === modelName,
+      )
+      .slice(0, 10)
+      .map(toProduct);
+  }, [allProducts, product]);
 
   const formatProductName = (
     name: string,
@@ -257,196 +228,250 @@ export const ProductDetailPage: React.FC = () => {
   ): string => {
     switch (category) {
       case 'phones':
-        return `${name.replace(/(\d+GB|\d+TB)/, capacity || '')}`;
+        return name.replace(/(\d+GB|\d+TB)/, capacity || '');
+
       case 'tablets':
         return `${name}${capacity ? ` (${capacity})` : ''}`;
+
       case 'accessories':
         return name;
+
       default:
         return name;
     }
   };
 
+  if (loading) {
+    return (
+      <div className="productDetail">
+        <div className="loader__top">
+          <Loader />
+        </div>
+      </div>
+    );
+  }
+
+  if (errors && !product) {
+    return (
+      <div className="productDetail__error container">
+        <h1>Product not found</h1>
+        <p>Sorry, we couldn&apos;t find this product.</p>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return <EmptyPage />;
+  }
+
   const productNameWithCapacity = formatProductName(
     product.name,
-    selectedCapacity,
+    product.capacity,
     productType,
   );
 
   return (
     <div className="productDetail">
-      {loading ? (
-        <div className="loader__top">
-          <Loader />
-        </div>
-      ) : (
-        <div className="container">
-          <BackButton
-            title={
-              productType === 'phones'
-                ? 'Phones'
-                : productType.charAt(0).toUpperCase() + productType.slice(1)
-            }
-            isFullDetailsOfProduct={true}
-            nameProduct={productNameWithCapacity}
-          />
-          <div className="productDetail">
-            <h1 className="productDetail__name">{productNameWithCapacity}</h1>
-            <div className="productDetail__wrapper">
-              <div className="productDetail__images">
-                {activeImage && (
+      <div className="container">
+        <BackButton
+          title={
+            productType === 'phones'
+              ? 'Phones'
+              : productType.charAt(0).toUpperCase() + productType.slice(1)
+          }
+          isFullDetailsOfProduct={true}
+          nameProduct={productNameWithCapacity}
+        />
+
+        <div className="productDetail">
+          <h1 className="productDetail__name">{productNameWithCapacity}</h1>
+
+          <div className="productDetail__wrapper">
+            <div className="productDetail__images">
+              {activeImage && (
+                <img
+                  src={`${import.meta.env.BASE_URL}${activeImage.replace(/^\/+/, '')}`}
+                  alt={`${productNameWithCapacity} - Active`}
+                  className="productDetail__image--active"
+                />
+              )}
+
+              <div className="productDetail__thumbnails">
+                {product.images.map(image => (
                   <img
-                    src={`${import.meta.env.BASE_URL}${activeImage?.replace(/^\/+/, '')}`}
-                    alt={`${productNameWithCapacity} - Active`}
-                    className="productDetail__image--active"
+                    key={image}
+                    src={`${import.meta.env.BASE_URL}${image.replace(/^\/+/, '')}`}
+                    alt={`${productNameWithCapacity} - Thumbnail`}
+                    className={`productDetail__image ${
+                      image === activeImage ? 'selected' : ''
+                    }`}
+                    onClick={() => setActiveImage(image)}
                   />
-                )}
-                <div className="productDetail__thumbnails">
-                  {product.images.map(image => (
-                    <img
-                      key={image}
-                      src={`${import.meta.env.BASE_URL}${image.replace(/^\/+/, '')}`}
-                      alt={`${productNameWithCapacity} - Thumbnail`}
-                      className={`productDetail__image ${image === activeImage ? 'selected' : ''}`}
-                      onClick={() => setActiveImage(image)}
-                    />
+                ))}
+              </div>
+            </div>
+
+            <div className="productDetail__info">
+              <div className="productDetail__color">
+                <div className="color--wrapper">
+                  <p className="text">Available colors</p>
+                  <p className="text mr">Id: {product.serialNumber}</p>
+                </div>
+
+                <div className="color">
+                  {product.colorsAvailable.map(color => {
+                    const colorKey = color.replace(/\s+/g, '_');
+
+                    return (
+                      <button
+                        key={colorKey}
+                        className={`color__option ${
+                          colorKey === product.color ? 'selected' : ''
+                        }`}
+                        style={{
+                          backgroundColor: colorCodes[colorKey] || '#fff',
+                        }}
+                        onClick={() => handleColorChange(colorKey)}
+                        title={color}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              <hr className="line" />
+
+              <div className="productDetail__capacity">
+                <p className="text">Select capacity</p>
+
+                <div className="productDetail__memoryPhone">
+                  {product.capacityAvailable.map(capacity => (
+                    <button
+                      key={capacity}
+                      className={`memory__option ${
+                        capacity === product.capacity ? 'selected' : ''
+                      }`}
+                      onClick={() => handleCapacityChange(capacity)}
+                    >
+                      {capacity}
+                    </button>
                   ))}
                 </div>
               </div>
-              <div className="productDetail__info">
-                <div className="productDetail__color">
-                  <div className="color--wrapper">
-                    <p className="text">Available colors</p>
-                    <p className="text mr">Id: {product.serialNumber}</p>
-                  </div>
-                  <div className="color">
-                    {product.colorsAvailable.map(color => {
-                      const colorKey = color.replace(/\s+/g, '_');
 
-                      return (
-                        <button
-                          key={colorKey}
-                          className={`color__option ${colorKey === selectedColor ? 'selected' : ''}`}
-                          style={{
-                            backgroundColor: colorCodes[colorKey] || '#fff',
-                          }}
-                          onClick={() => handleColorChange(colorKey)}
-                          title={color}
-                        ></button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <hr className="line" />
-                <div className="productDetail__capacity">
-                  <p className="text">Select capacity</p>
-                  <div className="productDetail__memoryPhone">
-                    {product.capacityAvailable.map(capacity => (
-                      <button
-                        key={capacity}
-                        className={`memory__option ${capacity === selectedCapacity ? 'selected' : ''}`}
-                        onClick={() => handleCapacityChange(capacity)}
-                      >
-                        {capacity}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <hr className="line" />
-                <div className="productDetail__price">
-                  <PriceDisplay
-                    priceRegular={product.priceRegular}
-                    priceDiscount={product.priceDiscount}
-                    showDiscount={true}
-                  />
-                </div>
-                <div className="productDetail__add">
-                  <CartControls
-                    isAdded={isAdded}
-                    isLiked={isLiked}
-                    onAddToCart={handleAddToCart}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                  <PhoneSpecs
-                    screen={product.screen}
-                    capacity={product.capacity}
-                    ram={product.ram}
-                    color={product.color}
-                  />
-                </div>
+              {errors && <p role="alert">{errors}</p>}
+
+              <hr className="line" />
+
+              <div className="productDetail__price">
+                <PriceDisplay
+                  priceRegular={product.priceRegular}
+                  priceDiscount={product.priceDiscount}
+                  showDiscount={true}
+                />
+              </div>
+
+              <div className="productDetail__add">
+                <CartControls
+                  isAdded={isAdded}
+                  isLiked={isLiked}
+                  onAddToCart={handleAddToCart}
+                  onToggleFavorite={handleToggleFavorite}
+                />
+
+                <PhoneSpecs
+                  screen={product.screen}
+                  capacity={product.capacity}
+                  ram={product.ram}
+                  color={product.color}
+                />
               </div>
             </div>
-            <div className="productDetail__characteristics">
-              <div className="productDetail__list">
-                <p className="title">About</p>
-                <hr className="line" />
-                {product.description.map((desc, index) => (
-                  <div key={index} className="productDetail__list--top">
-                    <p className="subtitle">{desc.title}</p>
-                    <p className="text">
-                      {desc.text.map((line, i) => (
-                        <span className="text__inf" key={i}>
-                          {line}
-                          <br /> <br />
-                        </span>
-                      ))}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="productDetail__tech">
-                <p className="title">Tech specs</p>
-                <hr className="line" />
-                <div className="phone-specs productDetail__tech--top">
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">Screen</p>
-                    <p className="phone-specs__size">
-                      {product.screen.slice(0, 9)}
-                    </p>
-                  </div>
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">Resolution</p>
-                    <p className="phone-specs__size">{product.resolution}</p>
-                  </div>
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">Processor</p>
-                    <p className="phone-specs__size">{product.processor}</p>
-                  </div>
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">RAM</p>
-                    <p className="phone-specs__size">
-                      {product.ram.slice(0, 1)} GB
-                    </p>
-                  </div>
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">Built in memory</p>
-                    <p className="phone-specs__size">{product.capacity} GB</p>
-                  </div>
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">Camera</p>
-                    <p className="phone-specs__size">{product.camera}</p>
-                  </div>
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">Zoom</p>
-                    <p className="phone-specs__size">{product.zoom}</p>
-                  </div>
-                  <div className="phone-specs__param">
-                    <p className="phone-specs__text">Cell</p>
-                    <p className="phone-specs__size phone-specs__size--cell">
-                      {product.cell.join(', ')}
-                    </p>
-                  </div>
+          </div>
+
+          <div className="productDetail__characteristics">
+            <div className="productDetail__list">
+              <p className="title">About</p>
+              <hr className="line" />
+
+              {product.description.map((desc, index) => (
+                <div key={index} className="productDetail__list--top">
+                  <p className="subtitle">{desc.title}</p>
+
+                  <p className="text">
+                    {desc.text.map((line, i) => (
+                      <span className="text__inf" key={i}>
+                        {line}
+                        <br />
+                        <br />
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="productDetail__tech">
+              <p className="title">Tech specs</p>
+              <hr className="line" />
+
+              <div className="phone-specs productDetail__tech--top">
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">Screen</p>
+                  <p className="phone-specs__size">
+                    {product.screen.slice(0, 9)}
+                  </p>
+                </div>
+
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">Resolution</p>
+                  <p className="phone-specs__size">{product.resolution}</p>
+                </div>
+
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">Processor</p>
+                  <p className="phone-specs__size">{product.processor}</p>
+                </div>
+
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">RAM</p>
+                  <p className="phone-specs__size">
+                    {product.ram.slice(0, 1)} GB
+                  </p>
+                </div>
+
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">Built in memory</p>
+                  <p className="phone-specs__size">{product.capacity} GB</p>
+                </div>
+
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">Camera</p>
+                  <p className="phone-specs__size">{product.camera}</p>
+                </div>
+
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">Zoom</p>
+                  <p className="phone-specs__size">{product.zoom}</p>
+                </div>
+
+                <div className="phone-specs__param">
+                  <p className="phone-specs__text">Cell</p>
+                  <p className="phone-specs__size phone-specs__size--cell">
+                    {product.cell.join(', ')}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          <NewItems
-            product={recommendedProducts.map(toProduct)}
-            title="You may also like"
-            showDiscount={true}
-          />
         </div>
-      )}
+
+        <NewItems
+          product={recommendedProducts}
+          title="You may also like"
+          showDiscount={true}
+        />
+      </div>
     </div>
   );
 };

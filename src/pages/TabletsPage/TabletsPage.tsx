@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo } from 'react';
 
 import tabletsData from '@/api/tablets.json';
 
@@ -10,134 +9,45 @@ import { CustomSelectPage } from '@/components/CustomSelectPage';
 import { Loader } from '@/components/Loader';
 
 import { useFooter } from '@/context/FooterContext';
-import { useLoader } from '@/context/LoaderContext';
+
+import { useCatalog } from '@/hooks/useCatalog';
+import { useProducts } from '@/hooks/useProducts';
 
 import { EmptyPage } from '@/pages/EmptyPage';
 import { PaginationPage } from '@/pages/PaginationPage';
 
-import type { Product, ProductDetailed } from '@/types';
+import { paginateProducts } from '@/utils/paginateProducts';
+import { sortProducts } from '@/utils/sortProducts';
 
 import './TabletsPage.scss';
 
-const transformData = (data: ProductDetailed[]): Product[] => {
-  return data.map(item => ({
-    ...item,
-    itemId: item.id,
-    fullPrice: item.priceRegular,
-    price: item.priceDiscount,
-  }));
-};
-
-const extractVersionNumber = (name: string): number => {
-  const match = name.match(/\d+/);
-
-  return match ? parseInt(match[0], 10) : 0;
-};
-
 export const TabletsPage: React.FC = () => {
-  const [tablets, setTablets] = useState<Product[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'all'>('all');
-  const [sortType, setSortType] = useState<string>('newest');
-
-  const { isLoading, setIsLoading } = useLoader();
+  const { products: tablets, isLoading } = useProducts(tabletsData);
   const { setIsShow } = useFooter();
 
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const params = new URLSearchParams(location.search);
-  const initialSortType = params.get('sort') === 'latest' ? 'latest' : 'newest';
-  const perPageParam = params.get('perPage') || 'all';
-  const pageParam = parseInt(params.get('page') || '1', 10);
-
-  useEffect(() => {
-    setIsLoading(true);
-
-    const timeoutId = setTimeout(() => {
-      const data = transformData(tabletsData);
-
-      setTablets(data);
-      setIsLoading(false);
-    }, 1000);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [setIsLoading]);
-
-  useEffect(() => {
-    const newItemsPerPage =
-      perPageParam === 'all' ? tablets.length : parseInt(perPageParam, 10);
-
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(pageParam);
-    setSortType(initialSortType);
-  }, [perPageParam, pageParam, initialSortType, tablets.length]);
+  const {
+    sortType,
+    currentPage,
+    itemsPerPage,
+    handleSortChange,
+    handleItemsPerPageChange,
+    handlePageChange,
+  } = useCatalog();
 
   useEffect(() => {
     setIsShow(tablets.length > 0);
   }, [tablets.length, setIsShow]);
 
-  const updateUrlParams = (newParams: URLSearchParams) => {
-    navigate(`?${newParams.toString()}`);
-  };
-
-  const handleSortChange = (selectedSortType: string) => {
-    const newParams = new URLSearchParams(location.search);
-
-    newParams.set('sort', selectedSortType);
-    updateUrlParams(newParams);
-  };
-
-  const handleItemsPerPageChange = (value: string) => {
-    const newItemsPerPage =
-      value === 'all' ? tablets.length : parseInt(value, 10);
-
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
-
-    const newParams = new URLSearchParams(location.search);
-
-    newParams.set('perPage', value);
-    newParams.set('page', '1');
-
-    updateUrlParams(newParams);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-
-    const newParams = new URLSearchParams(location.search);
-
-    newParams.set('page', page.toString());
-    updateUrlParams(newParams);
-  };
-
-  const sortedTablets = useMemo(() => {
-    const sorted = [...tablets];
-
-    sorted.sort((a, b) => {
-      const versionA = extractVersionNumber(a.name);
-      const versionB = extractVersionNumber(b.name);
-
-      return sortType === 'latest' ? versionA - versionB : versionB - versionA;
-    });
-
-    return sorted;
-  }, [tablets, sortType]);
-
-  const pageSize = itemsPerPage === 'all' ? tablets.length : itemsPerPage;
-
-  const indexOfLastTablet = currentPage * pageSize;
-  const indexOfFirstTablet = indexOfLastTablet - pageSize;
-
-  const currentTablets = sortedTablets.slice(
-    indexOfFirstTablet,
-    indexOfLastTablet,
+  const sortedTablets = useMemo(
+    () => sortProducts(tablets, sortType),
+    [tablets, sortType],
   );
 
-  const totalPages = pageSize > 0 ? Math.ceil(tablets.length / pageSize) : 0;
+  const {
+    currentProducts: currentTablets,
+    totalPages,
+    safePage,
+  } = paginateProducts(sortedTablets, currentPage, itemsPerPage);
 
   return (
     <div className="tablets container">
@@ -152,13 +62,11 @@ export const TabletsPage: React.FC = () => {
       </p>
 
       <div className="tablets__sort">
-        <CustomSelect onSortChange={handleSortChange} />
+        <CustomSelect sortType={sortType} onSortChange={handleSortChange} />
 
         <CustomSelectPage
           onItemsPerPageChange={handleItemsPerPageChange}
-          currentItemsPerPage={
-            itemsPerPage === tablets.length ? 'all' : itemsPerPage.toString()
-          }
+          currentItemsPerPage={itemsPerPage.toString()}
         />
       </div>
 
@@ -180,7 +88,7 @@ export const TabletsPage: React.FC = () => {
 
       {totalPages > 1 && !isLoading && (
         <PaginationPage
-          currentPage={currentPage}
+          currentPage={safePage}
           totalPages={totalPages}
           onPageChange={handlePageChange}
         />

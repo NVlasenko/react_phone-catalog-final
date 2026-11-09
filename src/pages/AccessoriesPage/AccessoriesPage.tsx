@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo } from 'react';
 
 import accessoriesData from '@/api/accessories.json';
 
@@ -11,143 +10,45 @@ import { Loader } from '@/components/Loader';
 import { NotFound } from '@/components/NotFound';
 
 import { useFooter } from '@/context/FooterContext';
-import { useLoader } from '@/context/LoaderContext';
+
+import { useCatalog } from '@/hooks/useCatalog';
+import { useProducts } from '@/hooks/useProducts';
 
 import { EmptyPage } from '@/pages/EmptyPage';
 import { PaginationPage } from '@/pages/PaginationPage';
 
-import type { Product, ProductDetailed } from '@/types';
+import { paginateProducts } from '@/utils/paginateProducts';
+import { sortProducts } from '@/utils/sortProducts';
 
 import './Accessories.scss';
 
-const transformData = (data: ProductDetailed[]): Product[] => {
-  return data.map(item => ({
-    ...item,
-    itemId: item.id,
-    fullPrice: item.priceRegular,
-    price: item.priceDiscount,
-    capacity: item.capacity,
-    color: item.color,
-  }));
-};
-
-const cleanId = (id: string) => {
-  return id.replace(/_/g, '');
-};
-
-const extractVersionNumber = (name: string): number => {
-  const match = name.match(/\d+/);
-
-  return match ? parseInt(match[0], 10) : 0;
-};
-
 export const AccessoriesPage: React.FC = () => {
-  const [accessories, setAccessories] = useState<Product[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'all'>('all');
-  const [sortType, setSortType] = useState<string>('newest');
-
-  const { isLoading, setIsLoading } = useLoader();
+  const { products: accessories, isLoading } = useProducts(accessoriesData);
   const { setIsShow } = useFooter();
 
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const params = new URLSearchParams(location.search);
-  const initialSortType = params.get('sort') === 'latest' ? 'latest' : 'newest';
-  const perPageParam = params.get('perPage') || 'all';
-  const pageParam = params.get('page') || '1';
-
-  useEffect(() => {
-    setIsLoading(true);
-
-    const timeoutId = setTimeout(() => {
-      const data = transformData(accessoriesData);
-
-      setAccessories(data);
-      setIsLoading(false);
-    }, 1000);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [setIsLoading]);
-
-  useEffect(() => {
-    const newItemsPerPage =
-      perPageParam === 'all' ? accessories.length : parseInt(perPageParam, 10);
-
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(parseInt(cleanId(pageParam), 10));
-    setSortType(initialSortType);
-  }, [perPageParam, pageParam, initialSortType, accessories.length]);
+  const {
+    sortType,
+    currentPage,
+    itemsPerPage,
+    handleSortChange,
+    handleItemsPerPageChange,
+    handlePageChange,
+  } = useCatalog();
 
   useEffect(() => {
     setIsShow(accessories.length > 0);
   }, [accessories.length, setIsShow]);
 
-  const updateUrlParams = (newParams: URLSearchParams) => {
-    navigate(`?${newParams.toString()}`);
-  };
-
-  const handleSortChange = (selectedSortType: string) => {
-    const newParams = new URLSearchParams(location.search);
-
-    newParams.set('sort', selectedSortType);
-    updateUrlParams(newParams);
-  };
-
-  const handleItemsPerPageChange = (value: string) => {
-    const newItemsPerPage =
-      value === 'all' ? accessories.length : parseInt(value, 10);
-
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
-
-    const newParams = new URLSearchParams(location.search);
-
-    newParams.set('perPage', value);
-    newParams.set('page', '1');
-
-    updateUrlParams(newParams);
-  };
-
-  const handlePageChange = (page: number) => {
-    const cleanedPage = cleanId(page.toString());
-
-    setCurrentPage(page);
-
-    const newParams = new URLSearchParams(location.search);
-
-    newParams.set('page', cleanedPage);
-    updateUrlParams(newParams);
-  };
-
-  const sortedAccessories = useMemo(() => {
-    const sorted = [...accessories];
-
-    sorted.sort((a, b) => {
-      const versionA = extractVersionNumber(a.name);
-      const versionB = extractVersionNumber(b.name);
-
-      return sortType === 'latest' ? versionA - versionB : versionB - versionA;
-    });
-
-    return sorted;
-  }, [accessories, sortType]);
-
-  const pageSize = itemsPerPage === 'all' ? accessories.length : itemsPerPage;
-
-  const indexOfLastAccessory = currentPage * pageSize;
-  const indexOfFirstAccessory = indexOfLastAccessory - pageSize;
-
-  const currentAccessories = sortedAccessories.slice(
-    indexOfFirstAccessory,
-    indexOfLastAccessory,
+  const sortedAccessories = useMemo(
+    () => sortProducts(accessories, sortType),
+    [accessories, sortType],
   );
 
-  const totalPages =
-    pageSize > 0 ? Math.ceil(accessories.length / pageSize) : 0;
+  const {
+    currentProducts: currentAccessories,
+    totalPages,
+    safePage,
+  } = paginateProducts(sortedAccessories, currentPage, itemsPerPage);
 
   return (
     <div className="accessories container">
@@ -162,15 +63,11 @@ export const AccessoriesPage: React.FC = () => {
       </p>
 
       <div className="accessories__sort">
-        <CustomSelect onSortChange={handleSortChange} />
+        <CustomSelect sortType={sortType} onSortChange={handleSortChange} />
 
         <CustomSelectPage
           onItemsPerPageChange={handleItemsPerPageChange}
-          currentItemsPerPage={
-            itemsPerPage === accessories.length
-              ? 'all'
-              : itemsPerPage.toString()
-          }
+          currentItemsPerPage={itemsPerPage.toString()}
         />
       </div>
 
@@ -193,9 +90,9 @@ export const AccessoriesPage: React.FC = () => {
         </div>
       )}
 
-      {totalPages > 1 && (
+      {totalPages > 1 && !isLoading && (
         <PaginationPage
-          currentPage={currentPage}
+          currentPage={safePage}
           totalPages={totalPages}
           onPageChange={handlePageChange}
         />
