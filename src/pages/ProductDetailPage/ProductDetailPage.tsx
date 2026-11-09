@@ -67,7 +67,6 @@ export const ProductDetailPage: React.FC = () => {
           throw new Error('Product ID is missing');
         }
 
-        // Determine the category before requesting the product.
         const category = await determineCategoryByProductId(productId);
 
         const apiMethod = getProductAPI(category);
@@ -115,7 +114,6 @@ export const ProductDetailPage: React.FC = () => {
           setProduct(null);
         }
       } finally {
-        // Preserve the one-second minimum loader duration.
         const elapsed = Date.now() - startedAt;
         const remaining = Math.max(0, 1000 - elapsed);
 
