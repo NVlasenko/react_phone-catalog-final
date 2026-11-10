@@ -1,4 +1,5 @@
 import React from 'react';
+
 import './CartControls.scss';
 
 type Props = {
@@ -18,14 +19,22 @@ export const CartControls: React.FC<Props> = ({
     <div className="cart__added">
       <button
         className={`cart__added--add ${isAdded ? 'cart__added--isAdded' : ''}`}
-        onClick={onAddToCart}
+        onClick={event => {
+          event.stopPropagation();
+          onAddToCart();
+        }}
       >
         {isAdded ? 'Added' : 'Add to cart'}
       </button>
+
       <button
         className={`cart__added--heart ${isLiked ? 'liked' : ''}`}
-        onClick={onToggleFavorite}
-      ></button>
+        onClick={event => {
+          event.stopPropagation();
+          onToggleFavorite();
+        }}
+        aria-label={isLiked ? 'Remove from favorites' : 'Add to favorites'}
+      />
     </div>
   );
 };

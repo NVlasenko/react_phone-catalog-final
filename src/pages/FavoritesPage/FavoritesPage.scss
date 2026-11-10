@@ -5,20 +5,23 @@
   @include top-pages-styles;
 
   min-height: var( --favorites-height);
-  &__length {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 21px;
-    text-align: left;
-    color: $basic-grey-color;
-  }
-  &__wrapper {
-    display: flex;
-    justify-content: center;
-    min-height: calc(100vh - 406px);
-
-    @include on-tablet {
-     justify-content: flex-start;
+    &__length {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 21px;
+      text-align: left;
+      color: $basic-grey-color;
     }
-  }
+
+    &__wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      place-content: flex-start center;
+      gap: 16px;
+      min-height: calc(100vh - 406px);
+
+      @include on-tablet {
+        justify-content: flex-start;
+      }
+    }
 }

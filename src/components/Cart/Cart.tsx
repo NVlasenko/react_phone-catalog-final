@@ -39,7 +39,10 @@ export const Cart: React.FC<Props> = ({ product, showDiscount = true }) => {
     if (isLiked) {
       removeFromFavorites(product.id);
     } else {
-      addToFavorites(product);
+      addToFavorites({
+        ...product,
+        showDiscount,
+      });
     }
   };
 
@@ -59,15 +62,10 @@ export const Cart: React.FC<Props> = ({ product, showDiscount = true }) => {
     : '';
 
   return (
-    <div className="cart">
+    <div className="cart" onClick={handleImageClick}>
       <div className="cart__context">
         <div className="cart__wrapper">
-          <img
-            className="cart__image"
-            src={imageSrc}
-            alt={product.name}
-            onClick={handleImageClick}
-          />
+          <img className="cart__image" src={imageSrc} alt={product.name} />
 
           <p className="cart__name">{product.name}</p>
 

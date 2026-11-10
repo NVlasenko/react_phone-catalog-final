@@ -1,4 +1,5 @@
 import React from 'react';
+
 import './PriceDisplay.scss';
 
 type Props = {
@@ -10,12 +11,18 @@ type Props = {
 export const PriceDisplay: React.FC<Props> = ({
   priceRegular,
   priceDiscount,
-  showDiscount,
+  showDiscount = true,
 }) => {
+  const currentPrice = priceDiscount ?? priceRegular;
+
+  const hasDiscount =
+    showDiscount && priceDiscount !== undefined && priceDiscount < priceRegular;
+
   return (
     <div className="price-display">
-      <span className="price-display__discount">${priceDiscount}</span>
-      {showDiscount && (
+      <span className="price-display__discount">${currentPrice}</span>
+
+      {hasDiscount && (
         <span className="price-display__regular price-display__sale">
           ${priceRegular}
         </span>
