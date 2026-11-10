@@ -43,4 +43,5 @@ export type Product = {
   screen: string;
   ram: string;
   year?: number;
+  showDiscount?: boolean;
 };

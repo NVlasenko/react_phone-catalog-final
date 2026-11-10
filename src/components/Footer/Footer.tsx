@@ -22,17 +22,25 @@ export const Footer: React.FC = () => {
         </Link>
 
         <div className="footer__info">
-          <Link to="https://github.com/NVlasenko">
+          <a
+            href="https://github.com/NVlasenko"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <p className="footer__text">Github</p>
-          </Link>
+          </a>
 
-          <Link to="/not-found">
+          <a href="mailto:vlasenkonadia@gmail.com">
             <p className="footer__text">Contacts</p>
-          </Link>
+          </a>
 
-          <Link to="/not-found">
-            <p className="footer__text">rights</p>
-          </Link>
+          <a
+            href="https://www.gnu.org/licenses/gpl-3.0.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <p className="footer__text">Rights</p>
+          </a>
         </div>
 
         <div className="footer__top">

@@ -26,7 +26,11 @@ export const FavoritesPage: React.FC = () => {
       <div className="favorites__wrapper">
         {favorites.length > 0 ? (
           favorites.map(product => (
-            <Cart key={product.id} product={product} showDiscount={true} />
+            <Cart
+              key={product.id}
+              product={product}
+              showDiscount={product.showDiscount ?? true}
+            />
           ))
         ) : (
           <EmptyPage />
