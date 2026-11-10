@@ -35,7 +35,10 @@ export const Footer: React.FC = () => {
           </a>
 
           <a
-            href="https://www.gnu.org/licenses/gpl-3.0.html"
+            href={
+              'https://github.com/NVlasenko/' +
+              'react_phone-catalog-final/blob/main/LICENSE'
+            }
             target="_blank"
             rel="noopener noreferrer"
           >
